@@ -1,6 +1,10 @@
 .DS_Store
-
+/data
+/.vscode
+OLD STUFF/
+notebooks/
 flowtrace_python/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
