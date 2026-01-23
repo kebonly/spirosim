@@ -1,4 +1,4 @@
-# Changelog
+# Changelog - spiro_cfd
 
 All notable changes to this project will be documented in this file.
 
@@ -23,3 +23,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.0] - 2026-01-01
 Starting to properly keep track of changes in this repository
+
+# Changelog - spiro_analysis
+
+## [Unreleased]
+
+## [0.2.0] - 2026-01-23
+### Added
+- `spiro_analysis.preprocess.merge_strobe_triplet` function added
+
+### Changed
+- Got rid of the imports in the `spiro_analysis/__init__.py` file for now
+

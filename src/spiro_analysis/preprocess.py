@@ -371,3 +371,119 @@ class CircleSelector:
             # print(f"  Radius: {r:.2f}")
             plt.close()
 
+def merge_strobe_triplet(
+    img1: np.ndarray,
+    img2: np.ndarray,
+    img3: np.ndarray,
+    *,
+    glare_percentile: float = 95.0,
+    use_texture_filter: bool = True,
+    texture_thresh_percentile: float = 30.0,
+    eps: float = 1e-8,
+) -> np.ndarray:
+    """
+    Merge 3 images of the same aligned scene under different illumination angles,
+    suppressing glare/specular highlights via per-image glare detection + robust fusion.
+
+    Parameters
+    ----------
+    img1, img2, img3 : np.ndarray
+        Images with identical shape (H, W) or (H, W, C). C can be 3 (RGB) etc.
+        Assumed already registered/aligned.
+    glare_percentile : float
+        Pixels above this percentile (in intensity) are considered glare candidates.
+    use_texture_filter : bool
+        If True, also require low local texture to classify as glare (helps reject bright
+        diffuse regions like white paper).
+    texture_thresh_percentile : float
+        Texture below this percentile is considered "low texture" (only used if enabled).
+    eps : float
+        Numerical stability epsilon.
+
+    Returns
+    -------
+    merged : np.ndarray
+        Glare-suppressed fused image, same shape and dtype as the inputs.
+
+    Notes
+    -----
+    - If all 3 images are marked as glare at a pixel, falls back to pixel-wise median.
+    - Best results when highlights are additive (specular) and move with illumination.
+    """
+
+    imgs = [img1, img2, img3]
+    if not (img1.shape == img2.shape == img3.shape):
+        raise ValueError("All three images must have the same shape (must be aligned/registered).")
+
+    # Work in float32 for computation; restore dtype at end.
+    orig_dtype = img1.dtype
+    imgs_f = [i.astype(np.float32) for i in imgs]
+
+    # Convert to intensity for glare detection (per-pixel scalar).
+    def to_intensity(im: np.ndarray) -> np.ndarray:
+        if im.ndim == 2:
+            return im
+        # Luma-like weighting (works fine for RGB; for other channel counts, just average)
+        if im.shape[2] >= 3:
+            r, g, b = im[..., 0], im[..., 1], im[..., 2]
+            return 0.2126 * r + 0.7152 * g + 0.0722 * b
+        return np.mean(im, axis=2)
+
+    intens = [to_intensity(im) for im in imgs_f]  # list of (H,W)
+
+    # Simple local texture estimate: magnitude of finite differences.
+    # (Avoids needing OpenCV/scipy; fast and decent.)
+    def texture_map(I: np.ndarray) -> np.ndarray:
+        dx = np.abs(I[:, 1:] - I[:, :-1])
+        dy = np.abs(I[1:, :] - I[:-1, :])
+        # pad back to (H,W)
+        dx = np.pad(dx, ((0, 0), (0, 1)), mode="edge")
+        dy = np.pad(dy, ((0, 1), (0, 0)), mode="edge")
+        return dx + dy
+
+    # Build glare masks per image.
+    glare_masks = []
+    for I in intens:
+        bright_thr = np.percentile(I, glare_percentile)
+        bright = I >= bright_thr
+
+        if use_texture_filter:
+            T = texture_map(I)
+            tex_thr = np.percentile(T, texture_thresh_percentile)
+            low_tex = T <= tex_thr
+            glare = bright & low_tex
+        else:
+            glare = bright
+
+        glare_masks.append(glare)
+
+    # Stack for fusion: shape (3,H,W[,C])
+    stack = np.stack(imgs_f, axis=0)
+    masks = np.stack(glare_masks, axis=0)  # (3,H,W)
+
+    # Expand masks to channels if needed
+    if stack.ndim == 4:  # (3,H,W,C)
+        masks_exp = masks[..., None]  # (3,H,W,1)
+    else:  # (3,H,W)
+        masks_exp = masks
+
+    # Set glare pixels to NaN so we can ignore them in robust stats
+    stack_masked = stack.copy()
+    stack_masked[masks_exp] = np.nan
+
+    # Robust fusion: median of non-glare samples per pixel (and per channel if RGB)
+    merged = np.nanmedian(stack_masked, axis=0)
+
+    # If all 3 were NaN at some pixel, nanmedian returns NaN. Fill those with plain median.
+    fallback = np.median(stack, axis=0)
+    nan_locs = np.isnan(merged)
+    merged[nan_locs] = fallback[nan_locs]
+
+    # Clip and cast back to original dtype
+    if np.issubdtype(orig_dtype, np.integer):
+        info = np.iinfo(orig_dtype)
+        merged = np.clip(merged, info.min, info.max)
+        return merged.astype(orig_dtype)
+    else:
+        # For float images, keep range as-is (or you can clip to [0,1] if that's your convention)
+        return merged.astype(orig_dtype)

@@ -1,6 +1,9 @@
 # spirosim
 Simulating statistical physics of spirostomum cilliates
 
+### Experiments and data sets
+See the Obsidian project folder for descriptions of each data set.
+
 ### Notes
 spirosim_chemo_2024_12_15_23_23_14_numspiros_30_dif_5_deg_2_em_0.05_seed_3.npy
 I updated the spiro angle update rule to limit how sharp of an angle the spiros can turn
