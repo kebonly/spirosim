@@ -30,7 +30,8 @@ Starting to properly keep track of changes in this repository
 ### Added
 - `spiro_analysis.preprocess.merge_strobe_triplet` function added
 - `spiro_analysis.preprocess.merge_strobe_directory` function added
+- `spiro_analysis.preprocess.save_frames` added to decouple from `Experiment` class
+- `spiro_analysis.preprocess.get_crop_coordinates` added to decouple from `Experiment` class
 
 ### Changed
 - Got rid of the imports in the `spiro_analysis/__init__.py` file for now
-

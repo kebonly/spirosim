@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 import skimage
-from typing import Any, Union, Iterable
+from typing import Any, Union, Optional
 from tqdm import tqdm
 
 
@@ -130,27 +130,6 @@ class Experiment:
     def save_frames(self, dir_name, stretch_contrast=False):
         save_frames(self.frames, dir_name, stretch_contrast=stretch_contrast)
         return
-        # """ Saves experiment frames at whatever state they're currently in.
-        # """
-
-        # dir_path = f"{self.root_dir}/processed/{dir_name}"
-        # if not os.path.exists(dir_path):
-        #     os.makedirs(dir_path)
-        # with tqdm(total = len(self.frames)) as pbar:
-        #     for i, frame in enumerate(self.frames):
-
-        #         if stretch_contrast:
-        #             frame_min = np.min(frame).astype(np.uint8)
-        #             frame_max = np.max(frame).astype(np.uint8)
-        #             frame = frame.astype(np.uint8)
-        #             fout = ((frame - frame_min) / (frame_max - frame_min) * 255).astype(np.uint8)
-        #         else:
-        #             fout = np.clip(frame, 0, 255).astype(np.uint8)
-
-        #         imageio.imwrite(f"{dir_path}/img_{i}.bmp", fout)
-        #         pbar.update()
-
-        # return
     
     def imshow(self, frame_number=0):
         plt.imshow(self.frames[frame_number], cmap=plt.cm.gray)
@@ -235,8 +214,8 @@ class CircleSelector:
     def __init__(self, ax, img):
         self.ax = ax
         self.img = img
-        self.circle = None
-        self.press = None
+        self.press: tuple[float, float]
+        self.circle: Circle = self._init_circle()
         self.mode = None  # 'draw', 'move', 'resize'
         self.drag_threshold = 10  # pixel distance for selecting edge
 
@@ -245,31 +224,33 @@ class CircleSelector:
         self.cid_motion = ax.figure.canvas.mpl_connect('motion_notify_event', self.on_motion)
         self.cid_key = ax.figure.canvas.mpl_connect('key_press_event', self.on_key)
 
+        # Start drawing new circle
+        self.ax.add_patch(self.circle)
+
+    def _init_circle(self) -> Circle:
+        shape = np.shape(self.img)
+        x0, y0 = shape[1]/2, shape[0]/2
+        # self.press = (x0, y0)
+        circle_size = min(x0, y0)/4
+        return Circle((x0, y0), circle_size, edgecolor='r', fill=False, linewidth=2)
+    
     def on_press(self, event):
         if event.inaxes != self.ax:
             return
 
         x0, y0 = event.xdata, event.ydata
+        cx, cy = self.circle.center
+        r = self.circle.radius
+        dist = np.hypot(x0 - cx, y0 - cy)
 
-        if self.circle is None:
-            # Start drawing new circle
-            self.mode = 'draw'
-            self.press = (x0, y0)
-            self.circle = Circle((x0, y0), 1, edgecolor='r', fill=False, linewidth=2)
-            self.ax.add_patch(self.circle)
+        if abs(dist - r) < self.drag_threshold:
+            self.mode = 'resize'
+            self.press = (cx, cy)
+        elif dist < r:
+            self.mode = 'move'
+            self.press = (x0 - cx, y0 - cy)
         else:
-            cx, cy = self.circle.center
-            r = self.circle.radius
-            dist = np.hypot(x0 - cx, y0 - cy)
-
-            if abs(dist - r) < self.drag_threshold:
-                self.mode = 'resize'
-                self.press = (cx, cy)
-            elif dist < r:
-                self.mode = 'move'
-                self.press = (x0 - cx, y0 - cy)
-            else:
-                self.mode = None
+            self.mode = None
 
     def on_motion(self, event):
         if event.inaxes != self.ax or self.circle is None or self.mode is None:
@@ -293,15 +274,11 @@ class CircleSelector:
 
     def on_release(self, event):
         self.mode = None
-        self.press = None
 
     def on_key(self, event):
         if event.key == 'enter' and self.circle is not None:
             cx, cy = self.circle.center
             r = self.circle.radius
-            # print(f"\n✅ Final circle:")
-            # print(f"  Center: ({cx:.2f}, {cy:.2f})")
-            # print(f"  Radius: {r:.2f}")
             plt.close()
 
 def merge_strobe_triplet(
@@ -498,6 +475,20 @@ def merge_strobe_directory(
 
     print("✅ Done.")
 
+def get_crop_coordinates(image_path: Union[str, Path]) -> tuple[tuple[float, float], float]:
+    # image_path = next((self.root_dir / "raw").iterdir())
+
+    img = mpimg.imread(image_path)
+
+    fig, ax = plt.subplots()
+    ax.imshow(img, cmap=plt.cm.gray)
+    ax.set_title("Click and drag to draw/resize/move circle. Press Enter to confirm.")
+
+    selector = CircleSelector(ax, img)
+    plt.show(block=True)
+
+    return selector.circle.center, selector.circle.radius
+
 def save_frames(
     frames: Union[NDArray, pims.FramesSequence], 
     dir_path: Union[str, Path], 
@@ -530,8 +521,6 @@ def save_frames(
         my_array = np.array([[1, 2], [3, 4]], dtype=np.float64)
         save_frames(my_array, "../data/test", 
                     output_frame_name="my_background")
-
-
 
     """
 
