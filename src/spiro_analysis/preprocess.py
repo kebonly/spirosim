@@ -158,9 +158,6 @@ class Experiment:
     def get_frame(self, frame_number=0):
         return self.frames[frame_number]
     
-        
-        
-
 @pims.pipeline
 def gray(frame):
     arr = frame[:, :]
@@ -195,16 +192,6 @@ def circle_crop(img, center_coordinates, radius):
 
     return cropped
 
-# def save_frames(frames, dir):
-#     if not os.path.exists(dir):
-#         os.makedirs(dir)
-#         print(f"Created directory: {dir}")
-#     for i, frame in enumerate(frames):
-#         fout = np.clip(frame, 0, 255).astype(np.uint8)
-#         imageio.imwrite(f"{dir}/cropped_{i}.bmp", fout)
-
-#     return dir
-
 @pims.pipeline
 def remove_small_objects(frame, min_size=70):
     mask = frame == 255
@@ -219,60 +206,6 @@ def subtract_background(frame, background):
     mask = subtracted < 0
     subtracted[mask] = 0 # NOTE: Shouldn't clamp to 0 so early on in pipeline
     return pims.Frame(subtracted, frame.frame_no)
-
-# @pims.pipeline
-# def enhance_contrast(frame,
-#                      p_low=1, p_high=99,          # robust stretch percentiles
-#                      method="clahe",              # "clahe" or "rescale"
-#                      clip_limit=0.01,             # CLAHE contrast limit (0–1)
-#                      tile_grid_size=(8, 8),       # CLAHE tile grid
-#                      gamma=None,                  # e.g. 0.8 to brighten, 1.2 to darken
-#                      out_dtype=np.float32,
-#                      min_brightness=24):       # keep float for later steps
-#     """Per-frame contrast enhancement for dim/bright particles.
-
-#     - Robust percentile stretch to remove exposure variations.
-#     - Optional CLAHE for local contrast in uneven illumination.
-#     """
-#     arr = np.asarray(frame)
-#     print(np.max(arr))
-#     # print(np.max(arr))
-#     if np.max(arr) > min_brightness:
-#         fin = arr.astype(np.float32) / np.max(arr)
-#     else:
-#         fin = arr.astype(np.float32) / min_brightness
-
-#     # pick output dtype
-#     if out_dtype == np.uint8:
-#         fout = (np.clip(fin, 0, 1) * 255.0 + 0.5).astype(np.uint8)
-#     else:
-#         fout = fin.astype(out_dtype)
-#     # print(getattr(frame, "frame_no", None))
-
-#     return pims.Frame(fout, frame_no=getattr(frame, "frame_no", None),
-#                       metadata=getattr(frame, "metadata", {}))
-
-
-# def background_subtraction(experiment, save=False):
-#     # TODO: make sure to flatten background?
-#     frames = gray(open_frames(experiment))
-
-#     background_frames = open_backgrounds(experiment)
-#     background = background_calculation(frames, background_frames)
-#     if save:
-#         print("Saving calculated background image...")
-#         background_path = Path(f"data/processed/{experiment}/background.bmp")
-#         background_path.parent.mkdir(parents=True, exist_ok=True)
-#         background_path.touch(exist_ok=True)
-#         print(type(background))
-#         iio.imwrite(f"data/processed/{experiment}/background.bmp", background.astype(np.uint8))
-
-#     # background_arr = np.asarray(background, dtype=np.int16)
-#     # subtracted = np.asarray(frames, dtype=np.int16) - background_arr
-#     subtracted = subtract_background(frames, background)
-
-
-#     return subtracted
 
 def open_backgrounds(path):
     try:
