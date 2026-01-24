@@ -3,8 +3,7 @@ import numpy as np
 import scipy
 import json
 from pathlib import Path
-import matplotlib as mpl
-import imageio.v2 as iio
+
 from skimage import exposure
 import skimage
 from typing import Any
@@ -487,3 +486,80 @@ def merge_strobe_triplet(
     else:
         # For float images, keep range as-is (or you can clip to [0,1] if that's your convention)
         return merged.astype(orig_dtype)
+
+def merge_strobe_directory(
+    input_dir,
+    output_dir,
+    *,
+    suffix="_merged",
+    ext=None,
+    overwrite=False,
+    **merge_kwargs,
+):
+    """
+    Merge strobe triplets in a directory using merge_strobe_triplet
+    and save the fused frames to a new directory.
+
+    Parameters
+    ----------
+    input_dir : str or Path
+        Directory containing raw images ordered as A,B,C,A,B,C,...
+    output_dir : str or Path
+        Directory where merged images will be saved.
+    suffix : str
+        Suffix added to output filenames.
+    ext : str or None
+        Output extension (e.g. ".tif", ".png").
+        If None, uses input file extension.
+    overwrite : bool
+        If False, skip files that already exist.
+    merge_kwargs : dict
+        Passed directly to merge_strobe_triplet.
+    """
+
+    input_dir = Path(input_dir)
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Collect image files
+    files = sorted(
+        f for f in input_dir.iterdir()
+        if f.suffix.lower() in {".tif", ".tiff", ".png", ".jpg", ".jpeg", ".bmp"}
+    )
+
+    if len(files) < 3:
+        raise ValueError("Need at least 3 images to form one strobe triplet.")
+
+    n_triplets = len(files) // 3
+    if len(files) % 3 != 0:
+        print(f"⚠️ Warning: {len(files)} files found, truncating to {3*n_triplets}.")
+
+    print(f"Processing {n_triplets} strobe triplets...")
+
+    for i in range(n_triplets):
+        f1, f2, f3 = files[3*i : 3*i + 3]
+
+        # Construct output filename
+        out_ext = ext if ext is not None else f1.suffix
+        out_name = f1.stem + suffix + out_ext
+        out_path = output_dir / out_name
+
+        if out_path.exists() and not overwrite:
+            print(f"Skipping existing {out_path.name}")
+            continue
+
+        # Load images
+        img1 = imageio.imread(f1)
+        img2 = imageio.imread(f2)
+        img3 = imageio.imread(f3)
+
+        # Merge
+        merged = merge_strobe_triplet(img1, img2, img3, **merge_kwargs)
+
+        # Save
+        imageio.imwrite(out_path, merged)
+
+        if i % 50 == 0 or i == n_triplets - 1:
+            print(f"  [{i+1}/{n_triplets}] saved {out_path.name}")
+
+    print("✅ Done.")

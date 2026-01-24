@@ -27,8 +27,6 @@ Starting to properly keep track of changes in this repository
 # Changelog - spiro_analysis
 
 ## [Unreleased]
-
-## [0.2.0] - 2026-01-23
 ### Added
 - `spiro_analysis.preprocess.merge_strobe_triplet` function added
 
