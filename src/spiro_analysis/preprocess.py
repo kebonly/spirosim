@@ -1,12 +1,10 @@
 import pims
 import numpy as np
-import scipy
 import json
 from pathlib import Path
 
-from skimage import exposure
 import skimage
-from typing import Any
+from typing import Any, Union, Iterable
 from tqdm import tqdm
 
 
@@ -17,6 +15,7 @@ import matplotlib.image as mpimg
 from matplotlib.patches import Circle
 import matplotlib as mpl
 import numpy as np
+from numpy.typing import NDArray
 import trackpy as tp
 import pims
 import imageio.v2 as imageio
@@ -129,27 +128,29 @@ class Experiment:
 
 
     def save_frames(self, dir_name, stretch_contrast=False):
-        """ Saves experiment frames at whatever state they're currently in.
-        """
-
-        dir_path = f"{self.root_dir}/processed/{dir_name}"
-        if not os.path.exists(dir_path):
-            os.makedirs(dir_path)
-        with tqdm(total = len(self.frames)) as pbar:
-            for i, frame in enumerate(self.frames):
-
-                if stretch_contrast:
-                    frame_min = np.min(frame).astype(np.uint8)
-                    frame_max = np.max(frame).astype(np.uint8)
-                    frame = frame.astype(np.uint8)
-                    fout = ((frame - frame_min) / (frame_max - frame_min) * 255).astype(np.uint8)
-                else:
-                    fout = np.clip(frame, 0, 255).astype(np.uint8)
-
-                imageio.imwrite(f"{dir_path}/img_{i}.bmp", fout)
-                pbar.update()
-
+        save_frames(self.frames, dir_name, stretch_contrast=stretch_contrast)
         return
+        # """ Saves experiment frames at whatever state they're currently in.
+        # """
+
+        # dir_path = f"{self.root_dir}/processed/{dir_name}"
+        # if not os.path.exists(dir_path):
+        #     os.makedirs(dir_path)
+        # with tqdm(total = len(self.frames)) as pbar:
+        #     for i, frame in enumerate(self.frames):
+
+        #         if stretch_contrast:
+        #             frame_min = np.min(frame).astype(np.uint8)
+        #             frame_max = np.max(frame).astype(np.uint8)
+        #             frame = frame.astype(np.uint8)
+        #             fout = ((frame - frame_min) / (frame_max - frame_min) * 255).astype(np.uint8)
+        #         else:
+        #             fout = np.clip(frame, 0, 255).astype(np.uint8)
+
+        #         imageio.imwrite(f"{dir_path}/img_{i}.bmp", fout)
+        #         pbar.update()
+
+        # return
     
     def imshow(self, frame_number=0):
         plt.imshow(self.frames[frame_number], cmap=plt.cm.gray)
@@ -496,3 +497,64 @@ def merge_strobe_directory(
             print(f"  [{i+1}/{n_triplets}] saved {out_path.name}")
 
     print("✅ Done.")
+
+def save_frames(
+    frames: Union[NDArray, pims.FramesSequence], 
+    dir_path: Union[str, Path], 
+    *,
+    output_frame_name: str = "img",
+    stretch_contrast: bool = True
+    ) -> None:
+    """ 
+    Saves a single frame or a PIMS lazy reader of frames to the 
+    designated directory path. will save as BMP.
+
+    Parameters
+    ---
+    frames : np.ndarray or pims.FramesSequence
+        If it is a single frame, assumes np.ndarray. Otherwise, it should
+        be a pims.FramesSequence with multiple frames.
+    dir_path : str or Path
+        What directory you want to save frame(s). Path is relative to the
+        directory from which the code is being run.
+    output_frame_name : str
+        What you want the base name
+    stretch_contrast: bool
+        Relavent for BMP, since NDArrays are usually float64, but BMP must
+        save in 8-bit format.
+
+    Examples
+    ---
+    Save a single frame::
+
+        my_array = np.array([[1, 2], [3, 4]], dtype=np.float64)
+        save_frames(my_array, "../data/test", 
+                    output_frame_name="my_background")
+
+
+
+    """
+
+    # dir_path = f"{self.root_dir}/processed/{dir_name}"
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+
+    # check if frames is NDArray or pims Iterable
+    if isinstance(frames, np.ndarray):
+        frames = (frames,)
+
+    with tqdm(total = len(frames)) as pbar:
+        for i, frame in enumerate(frames):
+
+            if stretch_contrast:
+                frame_min = np.min(frame).astype(np.uint8)
+                frame_max = np.max(frame).astype(np.uint8)
+                frame = frame.astype(np.uint8)
+                fout = ((frame - frame_min) / (frame_max - frame_min) * 255).astype(np.uint8)
+            else:
+                fout = np.clip(frame, 0, 255).astype(np.uint8)
+
+            imageio.imwrite(f"{dir_path}/{output_frame_name}_{i}.bmp", fout)
+            pbar.update()
+
+    return
