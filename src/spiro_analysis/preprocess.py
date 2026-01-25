@@ -219,6 +219,13 @@ class CircleSelector:
     def __init__(self, ax, img):
         self.ax = ax
         self.img = img
+        
+        # Preview window
+        self.fig_preview, self.ax_preview = plt.subplots()
+        self.im_preview = self.ax_preview.imshow(img, cmap="gray")
+        self.ax_preview.set_title("Crop preview")
+        self.ax_preview.set_aspect("equal")
+
         self.press: tuple[float, float]
         self.circle: Circle = self._init_circle()
         self.mode = None  # 'draw', 'move', 'resize'
@@ -277,6 +284,13 @@ class CircleSelector:
 
         self.ax.figure.canvas.draw()
 
+        # === Update preview ===
+        cropped = self._crop()
+        self.im_preview.set_data(cropped)
+        # self.ax_preview.set_xlim(0, cropped.shape[1])
+        # self.ax_preview.set_ylim(cropped.shape[0], 0)
+        self.fig_preview.canvas.draw_idle()
+
     def on_release(self, event):
         self.mode = None
 
@@ -285,6 +299,20 @@ class CircleSelector:
             cx, cy = self.circle.center
             r = self.circle.radius
             plt.close()
+
+    def _crop(self):
+        cx, cy = map(int, self.circle.center)
+        r = int(self.circle.radius)
+
+        x0, x1 = cx - r, cx + r
+        y0, y1 = cy - r, cy + r
+
+        x0 = max(x0, 0)
+        y0 = max(y0, 0)
+        x1 = min(x1, self.img.shape[1])
+        y1 = min(y1, self.img.shape[0])
+
+        return self.img[y0:y1, x0:x1]
 
 def merge_strobe_triplet(
     img1: np.ndarray,
@@ -481,7 +509,6 @@ def merge_strobe_directory(
     print("✅ Done.")
 
 def get_crop_coordinates(image_path: Union[str, Path]) -> tuple[tuple[float, float], float]:
-    # image_path = next((self.root_dir / "raw").iterdir())
 
     img = mpimg.imread(image_path)
 
