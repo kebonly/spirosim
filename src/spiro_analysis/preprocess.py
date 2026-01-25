@@ -155,9 +155,14 @@ def threshold(frame):
 
 
 @pims.pipeline
-def circle_crop(img, center_coordinates, radius):
+def circle_crop(
+    img: NDArray, 
+    center_coordinates: tuple[float, float], 
+    radius: float
+    ) -> NDArray:
     """
-    Crop the image to select the region of interest
+    Crop the image to select the region of interest using a defined
+    circle. Regions beyond the circle will be set to 0.
     """
     row_i, col_j = np.meshgrid(np.arange(img.shape[0]), np.arange(img.shape[1]), indexing='ij')
     distance = (row_i - center_coordinates[1])**2 + (col_j - center_coordinates[0])**2
