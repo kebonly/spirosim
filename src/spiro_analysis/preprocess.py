@@ -216,7 +216,8 @@ def background_calculation(img, background_data):
     return background
 
 class CircleSelector:
-    def __init__(self, ax, img):
+    def __init__(self, ax, img, circle_center: Optional[tuple[float, float]], 
+                 circle_radius: Optional[float]):
         self.ax = ax
         self.img = img
 
@@ -227,7 +228,7 @@ class CircleSelector:
         self.ax_preview.set_aspect("equal")
 
         self.press: tuple[float, float]
-        self.circle: Circle = self._init_circle()
+        self.circle: Circle = self._init_circle(circle_center, circle_radius)
         self.mode = None  # 'draw', 'move', 'resize'
         self.drag_threshold = 10  # pixel distance for selecting edge
 
@@ -239,11 +240,19 @@ class CircleSelector:
         # Start drawing new circle
         self.ax.add_patch(self.circle)
 
-    def _init_circle(self) -> Circle:
-        shape = np.shape(self.img)
-        x0, y0 = shape[1]/2, shape[0]/2
-        # self.press = (x0, y0)
-        circle_size = min(x0, y0)/4
+    def _init_circle(
+        self, 
+        circle_center: Optional[tuple[float, float]], 
+        circle_radius: Optional[float]
+        ) -> Circle:
+        if circle_center is None or circle_radius is None:
+            shape = np.shape(self.img)
+            x0, y0 = shape[1]/2, shape[0]/2
+            # self.press = (x0, y0)
+            circle_size = min(x0, y0)/4
+        else:
+            x0, y0 = circle_center
+            circle_size = circle_radius
         return Circle((x0, y0), circle_size, edgecolor='r', fill=False, linewidth=2)
     
     def on_press(self, event):
@@ -539,7 +548,11 @@ def merge_strobe_directory(
 
     print("✅ Done.")
 
-def get_crop_coordinates(image_path: Union[str, Path]) -> tuple[tuple[float, float], float]:
+def get_crop_coordinates(
+        image_path: Union[str, Path],
+        circle_center: Optional[tuple[float, float]] = None,
+        circle_radius: Optional[float] = None,
+        ) -> tuple[tuple[float, float], float]:
 
     img = mpimg.imread(image_path)
 
@@ -547,7 +560,7 @@ def get_crop_coordinates(image_path: Union[str, Path]) -> tuple[tuple[float, flo
     ax.imshow(img, cmap=plt.cm.gray)
     ax.set_title("Click and drag to draw/resize/move circle. Press Enter to confirm.")
 
-    selector = CircleSelector(ax, img)
+    selector = CircleSelector(ax, img, circle_center=circle_center, circle_radius=circle_radius)
     plt.show(block=True)
 
     return selector.circle.center, selector.circle.radius
