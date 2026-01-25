@@ -219,7 +219,7 @@ class CircleSelector:
     def __init__(self, ax, img):
         self.ax = ax
         self.img = img
-        
+
         # Preview window
         self.fig_preview, self.ax_preview = plt.subplots()
         self.im_preview = self.ax_preview.imshow(img, cmap="gray")
@@ -287,18 +287,49 @@ class CircleSelector:
         # === Update preview ===
         cropped = self._crop()
         self.im_preview.set_data(cropped)
-        # self.ax_preview.set_xlim(0, cropped.shape[1])
-        # self.ax_preview.set_ylim(cropped.shape[0], 0)
         self.fig_preview.canvas.draw_idle()
 
     def on_release(self, event):
         self.mode = None
 
     def on_key(self, event):
-        if event.key == 'enter' and self.circle is not None:
-            cx, cy = self.circle.center
-            r = self.circle.radius
+        move_step = 5
+        resize_step = 5
+        cx, cy = self.circle.center
+        r = self.circle.radius
+
+        # Arrow keys
+        if event.key == 'left':
+            cx -= move_step
+        elif event.key == 'right':
+            cx += move_step
+        elif event.key == 'up':
+            cy -= move_step
+        elif event.key == 'down':
+            cy += move_step
+
+        elif event.key == '.':
+            r -= resize_step
+        elif event.key == ',':
+            r += resize_step
+
+
+        elif event.key == 'enter' and self.circle is not None:
+
             plt.close()
+            return
+        
+        else:
+            return
+
+        self.circle.center = (cx, cy)
+        self.circle.set_radius(r)
+
+        # self.ax.figure.canvas.draw_idle()
+        self.ax.figure.canvas.draw()
+        cropped = self._crop()
+        self.im_preview.set_data(cropped)
+        self.fig_preview.canvas.draw_idle()
 
     def _crop(self):
         cx, cy = map(int, self.circle.center)
