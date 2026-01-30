@@ -29,6 +29,7 @@ Starting to properly keep track of changes in this repository
 ## [Unreleased]
 ### Added
 - `spiro_analysis.analysis.labels_stack_from_centroids` for napari manual processing
+- `pyproject.toml` initialized so that I can use library from future `./examples/`
 
 ## [0.2.0] - 2026-01-23
 ### Added
