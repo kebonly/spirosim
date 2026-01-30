@@ -120,6 +120,63 @@ def clean_fiji_csv(experiment):
     df = df.drop(index=[0, 1, 2])
     
     return df
+
+def labels_stack_from_centroids(
+    features_df,
+    image_stack_shape,     # (T, H, W)
+    radius=5,
+    frame_col="frame",
+    x_col="x",
+    y_col="y",
+    brightness_col="mass",     # tp.batch output usually has 'mass' (integrated brightness)
+    min_brightness=None,       # set e.g. to 200 or use np.percentile(features_df['mass'], 50)
+):
+    """
+    Convert tp.batch detections into a napari Labels stack where ALL kept detections
+    share the SAME label value = 1 (background = 0).
+
+    This is ideal if you want to manually edit a "bright detection mask" in napari
+    without assigning unique IDs yet.
+
+    - If min_brightness is provided, only detections with features_df[brightness_col] >= min_brightness are used.
+    - Each detection stamps a disk of radius `radius` into the labels.
+    """
+    T, H, W = image_stack_shape
+    labels = np.zeros((T, H, W), dtype=np.int32)
+
+    # Filter by brightness if requested
+    f = features_df
+    if min_brightness is not None:
+        if brightness_col not in f.columns:
+            raise ValueError(
+                f"brightness_col='{brightness_col}' not in features_df columns: {list(f.columns)}"
+            )
+        f = f[f[brightness_col] >= min_brightness]
+
+    # Precompute disk offsets
+    rr = np.arange(-radius, radius + 1)
+    yy, xx = np.meshgrid(rr, rr, indexing="ij")
+    disk = (xx**2 + yy**2) <= radius**2
+    dy, dx = np.where(disk)
+    dy = dy - radius
+    dx = dx - radius
+
+    # Group by frame; stamp label=1 for each detection
+    for t, g in f.groupby(frame_col, sort=True):
+        t = int(t)
+        if t < 0 or t >= T:
+            continue
+
+        xs = np.rint(g[x_col].to_numpy()).astype(int)
+        ys = np.rint(g[y_col].to_numpy()).astype(int)
+
+        for cx, cy in zip(xs, ys):
+            Y = cy + dy
+            X = cx + dx
+            valid = (Y >= 0) & (Y < H) & (X >= 0) & (X < W)
+            labels[t, Y[valid], X[valid]] = 1  # <- single label for all detections
+
+    return labels
     
 if __name__ == "__main__":
     experiment = "20250714_passiveInteraction_2_numSpiros_2"

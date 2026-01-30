@@ -28,6 +28,10 @@ Starting to properly keep track of changes in this repository
 
 ## [Unreleased]
 ### Added
+- `spiro_analysis.analysis.labels_stack_from_centroids` for napari manual processing
+
+## [0.2.0] - 2026-01-23
+### Added
 - `spiro_analysis.preprocess.merge_strobe_triplet` function added
 - `spiro_analysis.preprocess.merge_strobe_directory` function added
 - `spiro_analysis.preprocess.save_frames` added to decouple from `Experiment` class
