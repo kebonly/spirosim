@@ -32,9 +32,11 @@ Starting to properly keep track of changes in this repository
 - `pyproject.toml` initialized so that I can use library from future `./examples/`
 - `./configs/defaults.toml` and experiment toml for integration with CLI revamping
 - `cli.py` now has thin wrapper for CONFIG-DRIVEN EXECUTION
+- Can run project script `analysis --config <config_path>` to generate tracks from input directory of images
 
 ### Removed
 - Cleaned up `spiro_analysis` by removing `DELETE_crop_circles.py` and `DELETE_main.py`
+- Cleaned up `cli.py` for unused commands
 
 ## [0.2.0] - 2026-01-23
 ### Added

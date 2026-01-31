@@ -9,6 +9,7 @@ from scipy.spatial import cKDTree
 import pims
 import napari
 from pathlib import Path
+import trackpy as tp
 
 def calculate_velocity(trajectories, csv_out, fps=0.25, pixel_size=6.9e-6, unwrap=True):
     """Calculates velocity using finite differences
@@ -183,13 +184,75 @@ def labels_stack_from_centroids(
     return labels
 
 def run_analysis(cfg: dict, config_path: Path):
-    raise NotImplementedError
+
+    frames = pims.open(str(Path(cfg["analysis"]["input_dir"]) / "*.bmp"))
+    print(f"Loaded {len(frames)} frames")
+
+    TP_PARAMS = cfg["analysis"]["tp_batch"]
+    features = tp.batch(
+        frames,
+        threshold=TP_PARAMS["brightness_threshold"],
+        diameter=TP_PARAMS["diameter_threshold"],
+        minmass=TP_PARAMS["minimum_mass_threshold"],
+        invert=False
+    )
+
+    if TP_PARAMS["save_batch_frames"]:
+        features.to_csv(f"{cfg["paths"]["output_dir"]}", index=False)
+
+    LABELS_PARAMS = cfg["analysis"]["labels_stack"]
+    labels_stack = labels_stack_from_centroids(
+        features,
+        frames.shape,
+        radius=LABELS_PARAMS["radius"],
+        brightness_col=LABELS_PARAMS["brightness_col"],
+        min_brightness=LABELS_PARAMS["min_brightness"]
+    )
+
+    if cfg["analysis"]["do_napari"]: 
+        viewer = napari.Viewer()
+
+        viewer.add_image(
+        np.asarray(frames),
+        name="images",
+        colormap="gray"
+        )
+        labels_layer = viewer.add_labels(labels_stack, name="seg_from_batch", opacity=0.5)
+        napari.run()
+
+        edited_labels = np.array(labels_layer.data) * 255
+
+        features = tp.batch(
+            edited_labels,
+            threshold=10,
+            diameter=13,
+            invert=False
+        )
+
+        if LABELS_PARAMS["save_napari_edits"]:
+            features.to_csv(Path(cfg["analysis"]["output_dir"]) / "edited_features_batch.csv")
     
-if __name__ == "__main__":
-    experiment = "20250714_passiveInteraction_2_numSpiros_2"
-    trajectories = clean_fiji_csv(experiment)
-    vel_df = calculate_velocity(trajectories, f"data/processed/{experiment}/velocities_fiji.csv")
-    pairs_df, Cvv = pair_correlations(vel_df)
-    Cvv.to_csv(f"data/processed/{experiment}/cvv.csv")
-    sns.relplot(data=Cvv, x="r_bin", y="Cvv")
-    plt.show()
+
+    TRACK_PARAMS = cfg["analysis"]["track"]
+    tracks_df = tp.link_df(
+        features,
+        search_range=TRACK_PARAMS["search_range"],
+        memory=TRACK_PARAMS["memory"]
+    )
+
+    # print(f"{tracks_df['particle'].nunique()} tracks found")
+    tracks_df.head()
+    tracks_array = tracks_df[['particle', 'frame', 'y', 'x']].to_numpy()
+
+    if TRACK_PARAMS["save_tracks_df"]:
+        tracks_df.to_csv(Path(cfg["analysis"]["output_dir"]) / "tracks.csv")
+
+
+# if __name__ == "__main__":
+#     experiment = "20250714_passiveInteraction_2_numSpiros_2"
+#     trajectories = clean_fiji_csv(experiment)
+#     vel_df = calculate_velocity(trajectories, f"data/processed/{experiment}/velocities_fiji.csv")
+#     pairs_df, Cvv = pair_correlations(vel_df)
+#     Cvv.to_csv(f"data/processed/{experiment}/cvv.csv")
+#     sns.relplot(data=Cvv, x="r_bin", y="Cvv")
+#     plt.show()

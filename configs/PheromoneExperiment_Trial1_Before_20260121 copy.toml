@@ -4,17 +4,24 @@ description = ""
 date = "2026-01-21"
 
 [paths]
-data_dir = "data/PheromoneExperiment_Trial1_Before_20260121"
+data_dir = "results/PheromoneExperiment_Trial1_Before_20260121"
 output_dir = "results/PheromoneExperiment_Trial1_Before_20260121"
 
 [preprocess]
 
 [analysis]
+do_napari = true
 
-[analysis.tp_batch_1]
+[analysis.tp_batch]
 brightness_threshold = 4
 minimum_mass_threshold = 5000
 diameter_threshold = 51 # must be odd
+save_batch_frames = false
+
+[analysis.labels_stack]
+radius = 6
+brightness_col = "mass"
+min_brightness = 200
 
 [analysis.track]
 search_range = 150
