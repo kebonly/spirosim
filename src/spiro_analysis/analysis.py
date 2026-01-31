@@ -6,6 +6,10 @@ import seaborn as sns
 
 from scipy.spatial import cKDTree
 
+import pims
+import napari
+from pathlib import Path
+
 def calculate_velocity(trajectories, csv_out, fps=0.25, pixel_size=6.9e-6, unwrap=True):
     """Calculates velocity using finite differences
     """
@@ -177,6 +181,9 @@ def labels_stack_from_centroids(
             labels[t, Y[valid], X[valid]] = 1  # <- single label for all detections
 
     return labels
+
+def run_analysis(cfg: dict, config_path: Path):
+    raise NotImplementedError
     
 if __name__ == "__main__":
     experiment = "20250714_passiveInteraction_2_numSpiros_2"

@@ -30,6 +30,8 @@ Starting to properly keep track of changes in this repository
 ### Added
 - `spiro_analysis.analysis.labels_stack_from_centroids` for napari manual processing
 - `pyproject.toml` initialized so that I can use library from future `./examples/`
+- `./configs/defaults.toml` and experiment toml for integration with CLI revamping
+- `cli.py` now has thin wrapper for CONFIG-DRIVEN EXECUTION
 
 ### Removed
 - Cleaned up `spiro_analysis` by removing `DELETE_crop_circles.py` and `DELETE_main.py`
