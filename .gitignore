@@ -4,6 +4,7 @@
 OLD STUFF/
 notebooks/
 flowtrace_python/
+results/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

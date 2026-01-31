@@ -31,6 +31,9 @@ Starting to properly keep track of changes in this repository
 - `spiro_analysis.analysis.labels_stack_from_centroids` for napari manual processing
 - `pyproject.toml` initialized so that I can use library from future `./examples/`
 
+### Removed
+- Cleaned up `spiro_analysis` by removing `DELETE_crop_circles.py` and `DELETE_main.py`
+
 ## [0.2.0] - 2026-01-23
 ### Added
 - `spiro_analysis.preprocess.merge_strobe_triplet` function added

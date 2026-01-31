@@ -1,0 +1,21 @@
+[experiment]
+name = "PheromoneExperiment_Trial1_Before_20260121"
+description = ""
+date = "2026-01-21"
+
+[paths]
+data_dir = "data/PheromoneExperiment_Trial1_Before_20260121"
+output_dir = "results/PheromoneExperiment_Trial1_Before_20260121"
+
+[preprocess]
+
+[analysis]
+
+[analysis.tp_batch_1]
+brightness_threshold = 4
+minimum_mass_threshold = 5000
+diameter_threshold = 51 # must be odd
+
+[analysis.track]
+search_range = 150
+memory = 10
