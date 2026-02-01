@@ -33,6 +33,7 @@ Starting to properly keep track of changes in this repository
 - `./configs/defaults.toml` and experiment toml for integration with CLI revamping
 - `cli.py` now has thin wrapper for CONFIG-DRIVEN EXECUTION
 - Can run project script `analysis --config <config_path>` to generate tracks from input directory of images
+- Can view tracks with `view-tracks` CLI script
 
 ### Removed
 - Cleaned up `spiro_analysis` by removing `DELETE_crop_circles.py` and `DELETE_main.py`

@@ -8,6 +8,7 @@ version = "0.2.0"
 
 [project.scripts]
 analysis = "spiro_analysis.cli:analysis"
+view-tracks = "spiro_analysis.cli:view_tracks"
 
 [tool.setuptools.packages.find]
 where = ["src"]

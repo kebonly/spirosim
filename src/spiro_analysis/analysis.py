@@ -247,12 +247,21 @@ def run_analysis(cfg: dict, config_path: Path):
     if TRACK_PARAMS["save_tracks_df"]:
         tracks_df.to_csv(Path(cfg["analysis"]["output_dir"]) / "tracks.csv")
 
+def view_napari_tracks(cfg: dict):
+    frames = pims.open(str(Path(cfg["analysis"]["input_dir"]) / "*.bmp"))
 
-# if __name__ == "__main__":
-#     experiment = "20250714_passiveInteraction_2_numSpiros_2"
-#     trajectories = clean_fiji_csv(experiment)
-#     vel_df = calculate_velocity(trajectories, f"data/processed/{experiment}/velocities_fiji.csv")
-#     pairs_df, Cvv = pair_correlations(vel_df)
-#     Cvv.to_csv(f"data/processed/{experiment}/cvv.csv")
-#     sns.relplot(data=Cvv, x="r_bin", y="Cvv")
-#     plt.show()
+    viewer = napari.Viewer()
+    viewer.add_image(
+        np.asarray(frames),
+        name="images",
+        colormap="gray"
+    )
+    tracks_df = pd.read_csv(Path(cfg["analysis"]["output_dir"]) / "tracks.csv")
+    tracks_array = tracks_df[['particle', 'frame', 'y', 'x']].to_numpy()
+
+    tracks_layer = viewer.add_tracks(
+        tracks_array,
+        name="tracks"
+    )
+
+    napari.run()
