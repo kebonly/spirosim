@@ -10,6 +10,8 @@ import pims
 import napari
 from pathlib import Path
 import trackpy as tp
+from trackpy.filtering import filter_stubs
+from shapely.geometry import Point, Polygon
 
 def calculate_velocity(trajectories, csv_out, fps=0.25, pixel_size=6.9e-6, unwrap=True):
     """Calculates velocity using finite differences
@@ -183,27 +185,47 @@ def labels_stack_from_centroids(
 
     return labels
 
+def remove_points_inside_polygon(df, polygon, x_col="x", y_col="y"):
+    mask = df.apply(
+        lambda r: not polygon.contains(Point(r[y_col], r[x_col])), axis=1
+    )
+    print("num removed:", np.sum(mask))
+    return df[mask]
+
 def run_analysis(cfg: dict, config_path: Path):
 
     frames = pims.open(str(Path(cfg["analysis"]["input_dir"]) / "*.bmp"))
+    frames = frames[cfg["preprocess"].get("frame_start", 0):cfg["preprocess"].get("frame_end", len(frames)-1)]
     print(f"Loaded {len(frames)} frames")
 
     TP_PARAMS = cfg["analysis"]["tp_batch"]
-    features = tp.batch(
-        frames,
-        threshold=TP_PARAMS["brightness_threshold"],
-        diameter=TP_PARAMS["diameter_threshold"],
-        minmass=TP_PARAMS["minimum_mass_threshold"],
-        invert=False
-    )
 
-    if TP_PARAMS["save_batch_frames"]:
-        features.to_csv(f"{cfg["paths"]["output_dir"]}", index=False)
+ 
+    if cfg["analysis"].get("features_path") is None:
+        features = tp.batch(
+            frames,
+            threshold=TP_PARAMS["brightness_threshold"],
+            diameter=TP_PARAMS["diameter_threshold"],
+            minmass=TP_PARAMS["minimum_mass_threshold"],
+            invert=False
+        )
+        for polygon in TP_PARAMS.get("rois", []):
+            print("removing polygon rois")
+            poly = Polygon(polygon["vertices"])
+            print(poly)
+            # print(features)
+            features = remove_points_inside_polygon(features, poly)
+            # print(features)
+
+        if TP_PARAMS["save_batch_frames"]:
+            features.to_csv(f"{cfg["paths"]["output_dir"]}", index=False)
+    else:
+        features = pd.read_csv(cfg["analysis"].get("features_path"))
 
     LABELS_PARAMS = cfg["analysis"]["labels_stack"]
     labels_stack = labels_stack_from_centroids(
         features,
-        frames.shape,
+        np.shape(frames),
         radius=LABELS_PARAMS["radius"],
         brightness_col=LABELS_PARAMS["brightness_col"],
         min_brightness=LABELS_PARAMS["min_brightness"]
@@ -218,9 +240,22 @@ def run_analysis(cfg: dict, config_path: Path):
         colormap="gray"
         )
         labels_layer = viewer.add_labels(labels_stack, name="seg_from_batch", opacity=0.5)
+        
+        for poly in TP_PARAMS.get("rois", []):
+
+            poly_yx = np.array(poly["vertices"])
+
+            viewer.add_shapes(
+                [poly_yx],
+                shape_type="polygon",
+                name=poly["name"],
+                edge_width=2,
+                face_color="transparent",
+        )
         napari.run()
 
         edited_labels = np.array(labels_layer.data) * 255
+
 
         features = tp.batch(
             edited_labels,
@@ -240,8 +275,10 @@ def run_analysis(cfg: dict, config_path: Path):
         memory=TRACK_PARAMS["memory"]
     )
 
-    # print(f"{tracks_df['particle'].nunique()} tracks found")
-    tracks_df.head()
+    if TRACK_PARAMS.get("remove_stubs"):
+        stub_threshold = TRACK_PARAMS.get("stubs_threshold", 100)
+        tracks_df = filter_stubs(tracks_df, threshold=stub_threshold)
+
     tracks_array = tracks_df[['particle', 'frame', 'y', 'x']].to_numpy()
 
     if TRACK_PARAMS["save_tracks_df"]:

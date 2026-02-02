@@ -1,0 +1,62 @@
+[experiment]
+name = "PheromoneExperiment_Trial1_Many_20260121"
+description = ""
+date = "2026-01-21"
+
+[paths]
+data_dir = "data/PheromoneExperiment_Trial1_Many_20260121"
+output_dir = "results/PheromoneExperiment_Trial1_Many_20260121"
+
+[preprocess]
+# frame_start = 0
+# frame_end = 10
+input_dir = "data/PheromoneExperiment_Trial1_Many_20260121" 
+output_dir = "results/PheromoneExperiment_Trial1_Many_20260121/preprocessed" 
+do_merge = true
+save_background = true
+save_background_subtracted = true
+save_cropped_frames = true
+
+
+[analysis]
+input_dir = "results/PheromoneExperiment_Trial1_Many_20260121/preprocessed/cropped"
+output_dir = "results/PheromoneExperiment_Trial1_Many_20260121" 
+do_napari = true
+
+
+[analysis.tp_batch]
+brightness_threshold = 4
+minimum_mass_threshold = 3500
+diameter_threshold = 41 # must be odd
+save_batch_frames = false
+
+[[analysis.tp_batch.rois]]
+name = "pipette"
+vertices = [
+    [1146, 1759],
+    [1289, 898],
+    [1367, 908],
+    [1420, 1687]
+]
+
+[[analysis.tp_batch.rois]]
+name = "test"
+vertices = [
+    [10,100],
+    [100,100],
+    [100,10],
+    [10,10]
+]
+
+[analysis.labels_stack]
+radius = 6
+brightness_col = "mass"
+min_brightness = 200
+save_napari_edits = true
+
+[analysis.track]
+search_range = 120
+memory = 5
+remove_stubs = true
+stubs_threshold = 5
+save_tracks_df = true

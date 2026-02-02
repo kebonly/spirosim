@@ -10,6 +10,8 @@ output_dir = "results/PheromoneExperiment_Trial1_Before_20260121"
 [preprocess]
 
 [analysis]
+input_dir = "results/PheromoneExperiment_Trial1_Before_20260121/cropped_background_subtracted"
+output_dir = "results/PheromoneExperiment_Trial1_Before_20260121" 
 do_napari = true
 
 [analysis.tp_batch]
@@ -22,7 +24,9 @@ save_batch_frames = false
 radius = 6
 brightness_col = "mass"
 min_brightness = 200
+save_napari_edits = true
 
 [analysis.track]
 search_range = 150
 memory = 10
+save_tracks_df = true
