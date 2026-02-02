@@ -623,3 +623,30 @@ def save_frames(
             pbar.update()
 
     return
+
+def run_preprocess(cfg: dict):
+
+
+    OUTPUT_DIR = Path(cfg["preprocess"]["output_dir"])
+    INPUT_DIR = Path(cfg["preprocess"]["input_dir"])
+    MERGED_OUTPUT_DIR = OUTPUT_DIR / "merged"
+
+    if cfg["preprocess"]["do_merge"]:
+        merge_strobe_directory(INPUT_DIR, MERGED_OUTPUT_DIR)
+
+    frames = pims.open(f"{MERGED_OUTPUT_DIR}/*.bmp")
+    background = background_calculation(frames, None)
+    frames_background_subtracted = subtract_background(frames, background)
+
+    if cfg["preprocess"].get("save_background"):
+        save_frames(background, OUTPUT_DIR, output_frame_name="background")
+    
+    if cfg["preprocess"].get("save_background_subtracted"):
+        save_frames(frames_background_subtracted, OUTPUT_DIR / "background_subtracted", output_frame_name="background_subtracted")
+    
+
+    center, radius = get_crop_coordinates(sorted(MERGED_OUTPUT_DIR.glob("*"))[0] )
+    frames_cropped = circle_crop(frames_background_subtracted, center, radius)
+
+    if cfg["preprocess"].get("save_cropped_frames"):
+        save_frames(frames_cropped, OUTPUT_DIR / "cropped", output_frame_name="cropped")
